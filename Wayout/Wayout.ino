@@ -12,6 +12,7 @@
 #define package2_status 23
 
 StaticJsonBuffer<200> jsonBuffer;
+JsonArray& jsarray = jsonBuffer.createArray();
 
 MPU6050 accelgyro;
 int16_t ax, ay, az;
@@ -59,6 +60,10 @@ void setup(){
   Serial.begin(9600);
   accelgyro.initialize();
   digitalWrite(led,1);
+  jsarray.add(1==0);
+  jsarray.add(1==0);
+  jsarray.add(1==0);
+  jsarray.add(1==0);
 }
   
 void loop(){ 
@@ -91,11 +96,8 @@ void loop(){
       else{Serial.write("error");}}
 
     if(apptype=="update"){
-      JsonArray& jsarray = jsonBuffer.createArray();
-      jsarray.add(digitalRead(package1_status)==1);
-      jsarray.add(digitalRead(package2_status)==1);
-      jsarray.add(1==0);
-      jsarray.add(1==0);
+      jsarray[0] = (digitalRead(package1_status)==1);
+      jsarray[1] = (digitalRead(package2_status)==1);
       jsarray.printTo(Serial);
       }
       
