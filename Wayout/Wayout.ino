@@ -5,11 +5,16 @@
 #include <EEPROM.h>
 #include <ArduinoJson.h>
 
+static int ledStatus;
+static unsigned long lastDebounceTime;
+
+#define DEBOUNCE_DELAY 800
 #define KEY_ROWS 4 // 按鍵模組的列數
 #define KEY_COLS 4 // 按鍵模組的行數
 #define led 5
 #define package1_status 22
 #define package2_status 23
+#define button_open 24
 
 StaticJsonBuffer<200> jsonBuffer;
 JsonArray& jsarray = jsonBuffer.createArray();
@@ -31,17 +36,19 @@ int i=0,j=0,k=0;
 
 byte colPins[KEY_COLS] = {9, 8, 7, 6};     // 按鍵模組，行1~4接腳。
 byte rowPins[KEY_ROWS] = {13, 12, 11, 10}; // 按鍵模組，列1~4接腳。 
-char code [6]={'1','2','3','4','5','6'}; 
+char code [6] = {'1','2','3','4','5','6'}; 
 char command;
-String apptype="";
+String apptype = "";
 char appcod [6];
 char charstr_chang [1];
+int gout = 1; 
 
 void resetcode(void);
 void getvalue_fromapp(void);
 void store(void);
 void opendoor(void);
 void acquire(void);
+void debounce(void);
 // 初始化Keypad物件
 // 語法：Keypad(makeKeymap(按鍵字元的二維陣列), 模組列接腳, 模組行接腳, 模組列數, 模組行數)
 Keypad myKeypad = Keypad(makeKeymap(keymap), rowPins, colPins, KEY_ROWS, KEY_COLS);
@@ -56,6 +63,7 @@ void setup(){
   pinMode(led,OUTPUT);
   pinMode(package1_status,INPUT);
   pinMode(package2_status,INPUT);
+  pinMode(button_open,INPUT);
   Wire.begin();
   Serial.begin(9600);
   accelgyro.initialize();
@@ -77,9 +85,11 @@ void loop(){
   value= sqrt((gx*gx)+(gy*gy)+(gz*gz));
   
   for(int l = 0; l < LIST_MAX; l++) 
-    {      
+    {
+    int switchStatus = digitalRead(24);
+    if(switchStatus == HIGH){debounce();}        
     getvalue_fromapp();
-    //Serial.print(code);
+    Serial.print(code);
     if(apptype=="setpwd"){
       for(int s=0;s<6;s++){
         code[s]=appcod[s];    
@@ -105,7 +115,11 @@ void loop(){
  
     if(key1){
       if(key1==code[i]){i++;}
-      else{i=0;}}
+      else{i=0;}
+      if(key1=='A'){
+        if(gout==1){gout=0;}
+        else{gout++;}
+    }}
 
     if(myKeypad.key[l].kchar=='*'){
       switch(myKeypad.key[l].kstate){
@@ -173,11 +187,20 @@ void store(void){
   return;}
 
 void opendoor(void){
- if(i==6||value>=(10+18*degree_eq)){
+ if(i==6||((value*gout)>=(10+18*degree_eq))){
   digitalWrite(led,0);
   delay(1500);
   i=0;
   value=0;
   digitalWrite(led,1);}
   return;}
+
+void debounce(void){
+  unsigned long currentTime = millis();
+  if((currentTime - lastDebounceTime) > DEBOUNCE_DELAY){
+    lastDebounceTime = currentTime;
+    i=6;
+    opendoor();
+  }
+}
 
