@@ -11,10 +11,15 @@ static unsigned long lastDebounceTime;
 #define DEBOUNCE_DELAY 800
 #define KEY_ROWS 4 // 按鍵模組的列數
 #define KEY_COLS 4 // 按鍵模組的行數
-#define led 5
-#define package1_status 22
-#define package2_status 23
-#define button_open 24
+#define doorlock 36
+#define package1_status 44
+#define package2_status 42
+#define button_open 46
+#define opendoor 26
+#define closedoor 25
+#define opendrawer 27
+#define closedrawer 29
+#define led 31
 
 StaticJsonBuffer<200> jsonBuffer;
 JsonArray& jsarray = jsonBuffer.createArray();
@@ -43,10 +48,14 @@ char appcod [6];
 char charstr_chang [1];
 int gout = 1; 
 
+int openclosecount=0;
+
 void resetcode(void);
 void getvalue_fromapp(void);
 void store(void);
-void opendoor(void);
+void opendoor_keypad(void);
+void opendoor_eq(void);
+void closeall(void);
 void acquire(void);
 void debounce(void);
 // 初始化Keypad物件
@@ -60,6 +69,11 @@ void setup(){
   EEPROM.write(8,0);
   EEPROM.write(9,0);
   EEPROM.write(10,0);*/
+  pinMode(opendoor,OUTPUT);
+  pinMode(closedoor,OUTPUT);
+  pinMode(opendrawer,OUTPUT);
+  pinMode(closedrawer,OUTPUT);
+  pinMode(doorlock,OUTPUT);
   pinMode(led,OUTPUT);
   pinMode(package1_status,INPUT);
   pinMode(package2_status,INPUT);
@@ -67,7 +81,7 @@ void setup(){
   Wire.begin();
   Serial.begin(9600);
   accelgyro.initialize();
-  digitalWrite(led,1);
+  digitalWrite(doorlock,1);
   jsarray.add(1==0);
   jsarray.add(1==0);
   jsarray.add(1==0);
@@ -86,10 +100,14 @@ void loop(){
   
   for(int l = 0; l < LIST_MAX; l++) 
     {
-    int switchStatus = digitalRead(24);
-    if(switchStatus == HIGH){debounce();}        
-    getvalue_fromapp();
-    Serial.print(code);
+    int switchStatus = 0;
+    //Serial.print(switchStatus);
+    switchStatus = digitalRead(button_open);
+    if(switchStatus == 1){debounce();} 
+
+    //Serial.print(code);
+    
+    getvalue_fromapp();    
     if(apptype=="setpwd"){
       for(int s=0;s<6;s++){
         code[s]=appcod[s];    
@@ -138,7 +156,8 @@ void loop(){
               if(degree_eq<=9&&degree_eq>=0){break;}}}
           break;}}  
       //Serial.print(degree_eq);   
-  opendoor();
+  opendoor_keypad();
+  opendoor_eq();
 }
   store();
 }
@@ -186,21 +205,62 @@ void store(void){
   EEPROM.write(15,code[5]);
   return;}
 
-void opendoor(void){
- if(i==6||((value*gout)>=(10+18*degree_eq))){
-  digitalWrite(led,0);
-  delay(1500);
+void opendoor_keypad(void){
+ if(i==6){
+  digitalWrite(doorlock,0);
+  delay(300);
+  digitalWrite(opendoor,1);
+  delay(3000);
   i=0;
   value=0;
-  digitalWrite(led,1);}
+  openclosecount=1;
+  digitalWrite(doorlock,1);
+  digitalWrite(opendoor,0);}
+  return;}
+
+void opendoor_eq(void){
+ if(((value*gout)>=(10+18*degree_eq))){
+  digitalWrite(doorlock,0);
+  digitalWrite(led,1);
+  delay(300);
+  digitalWrite(opendoor,1);
+  delay(50);
+  digitalWrite(opendrawer,1);
+  delay(3000);
+  digitalWrite(doorlock,1);
+  digitalWrite(opendrawer,0);
+  digitalWrite(opendrawer,0);
+  i=0;
+  value=0;
+  openclosecount=1;}
   return;}
 
 void debounce(void){
   unsigned long currentTime = millis();
   if((currentTime - lastDebounceTime) > DEBOUNCE_DELAY){
+    //Serial.print(true);
     lastDebounceTime = currentTime;
-    i=6;
-    opendoor();
+    if(openclosecount==0){
+      i=6;
+      opendoor_keypad();
+      Serial.print("open");}
+    else{
+      closeall();
+      openclosecount=0;}
   }
+}
+
+void closeall(void){
+  Serial.print("close");
+  digitalWrite(doorlock,0);
+  digitalWrite(led,0);
+  digitalWrite(closedrawer,1);
+  delay(50);
+  digitalWrite(closedoor,1);
+  delay(3000);
+  digitalWrite(doorlock,1);
+  digitalWrite(closedoor,0);
+  digitalWrite(closedrawer,0);
+  i=0;
 }
 
