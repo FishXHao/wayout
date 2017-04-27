@@ -82,6 +82,11 @@ void setup(){
   Serial.begin(9600);
   accelgyro.initialize();
   digitalWrite(doorlock,1);
+  digitalWrite(opendoor,0);
+  digitalWrite(closedoor,1);
+  digitalWrite(closedrawer,0);
+  digitalWrite(opendrawer,1);
+  digitalWrite(led,0);
   jsarray.add(1==0);
   jsarray.add(1==0);
   jsarray.add(1==0);
@@ -208,28 +213,25 @@ void store(void){
 void opendoor_keypad(void){
  if(i==6){
   digitalWrite(doorlock,0);
-  delay(300);
   digitalWrite(opendoor,1);
-  delay(3000);
+  digitalWrite(closedoor,0);
   i=0;
   value=0;
   openclosecount=1;
-  digitalWrite(doorlock,1);
-  digitalWrite(opendoor,0);}
+  delay(1500);
+  digitalWrite(doorlock,1);}
   return;}
 
 void opendoor_eq(void){
  if(((value*gout)>=(10+18*degree_eq))){
   digitalWrite(doorlock,0);
-  digitalWrite(led,1);
-  delay(300);
   digitalWrite(opendoor,1);
-  delay(50);
-  digitalWrite(opendrawer,1);
-  delay(3000);
-  digitalWrite(doorlock,1);
+  digitalWrite(closedoor,0);
+  digitalWrite(closedrawer,1);
   digitalWrite(opendrawer,0);
-  digitalWrite(opendrawer,0);
+  digitalWrite(led,1);
+  delay(1500);
+  digitalWrite(doorlock,0);
   i=0;
   value=0;
   openclosecount=1;}
@@ -251,16 +253,11 @@ void debounce(void){
 }
 
 void closeall(void){
-  Serial.print("close");
-  digitalWrite(doorlock,0);
-  digitalWrite(led,0);
-  digitalWrite(closedrawer,1);
-  delay(50);
+  digitalWrite(opendoor,0);
   digitalWrite(closedoor,1);
-  delay(3000);
-  digitalWrite(doorlock,1);
-  digitalWrite(closedoor,0);
   digitalWrite(closedrawer,0);
+  digitalWrite(opendrawer,1);
+  digitalWrite(led,0);
   i=0;
 }
 
