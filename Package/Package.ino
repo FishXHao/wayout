@@ -2,10 +2,11 @@ static int ledStatus;
 static int voiceStatus;
 static unsigned long lastDebounceTime;
 #define DEBOUNCE_DELAY 800
-#define ledswitch 11
+#define ledswitch 12
 #define voiceswitch 9
 #define voice 2
-#define led 4
+#define led1 3
+#define led2 4
 #define switchled 10
 
 void openled(void);
@@ -16,12 +17,14 @@ void setup(){
   pinMode(ledswitch, INPUT);
   pinMode(voiceswitch, INPUT);
   pinMode(voice, OUTPUT);
-  pinMode(led, OUTPUT);
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
   pinMode(switchled, OUTPUT);
   
   ledStatus = HIGH;
   voiceStatus = LOW;
-  digitalWrite(led, ledStatus);
+  digitalWrite(led1, ledStatus);
+  digitalWrite(led2, ledStatus);
   digitalWrite(voice, voiceStatus);
   digitalWrite(switchled, 1);
 }
@@ -33,7 +36,7 @@ void loop(){
  switchledStatus = digitalRead(ledswitch);
  int switchvoiceStatus = 0;
  switchvoiceStatus = digitalRead(voiceswitch);
-      Serial.print(switchvoiceStatus);
+      Serial.print(switchledStatus);
   if(switchledStatus == HIGH){
     openled();
   }
@@ -48,7 +51,8 @@ void openled(){
     lastDebounceTime = currentTime;
    
     ledStatus = ledStatus == HIGH ? LOW : HIGH;
-    digitalWrite(led, ledStatus);
+    digitalWrite(led1, ledStatus);
+    digitalWrite(led2, ledStatus);
   }
 }
 
@@ -59,7 +63,7 @@ void openvoice(){
    
     voiceStatus = voiceStatus == HIGH ? LOW : HIGH;
     if(voiceStatus==1){
-      tone(voice,5000,0);
+      tone(voice,20000,0);
       digitalWrite(switchled, 0);}
     else{
       noTone (voice);
