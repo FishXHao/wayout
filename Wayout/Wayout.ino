@@ -8,7 +8,7 @@
 static int ledStatus;
 static unsigned long lastDebounceTime;
 
-#define DEBOUNCE_DELAY 800
+#define DEBOUNCE_DELAY 400
 #define KEY_ROWS 4 // 按鍵模組的列數
 #define KEY_COLS 4 // 按鍵模組的行數
 #define doorlock 36
@@ -20,6 +20,7 @@ static unsigned long lastDebounceTime;
 #define opendrawer 27
 #define closedrawer 29
 #define led 31
+#define doorlocksignal 38
 
 StaticJsonBuffer<200> jsonBuffer;
 JsonArray& jsarray = jsonBuffer.createArray();
@@ -28,8 +29,8 @@ MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 int value;
-int degree_eq=0;
-
+int degree_eq=5;
+                       
 // 依照行、列排列的按鍵字元（二維陣列）
 char keymap[KEY_ROWS][KEY_COLS] = {
   {'1', '2', '3', 'A'},
@@ -63,12 +64,12 @@ void debounce(void);
 Keypad myKeypad = Keypad(makeKeymap(keymap), rowPins, colPins, KEY_ROWS, KEY_COLS);
  
 void setup(){
-  /*EEPROM.write(5,0);
-  EEPROM.write(6,0);
-  EEPROM.write(7,0);
-  EEPROM.write(8,0);
-  EEPROM.write(9,0);
-  EEPROM.write(10,0);*/
+  /*EEPROM.write(10,'1');
+  EEPROM.write(11,'2');
+  EEPROM.write(12,'3');
+  EEPROM.write(13,'4');
+  EEPROM.write(14,'5');
+  EEPROM.write(15,'6');*/
   pinMode(opendoor,OUTPUT);
   pinMode(closedoor,OUTPUT);
   pinMode(opendrawer,OUTPUT);
@@ -78,8 +79,9 @@ void setup(){
   pinMode(package1_status,INPUT);
   pinMode(package2_status,INPUT);
   pinMode(button_open,INPUT);
+  pinMode(doorlocksignal,INPUT);
   Wire.begin();
-  Serial.begin(9600);
+  Serial2.begin(9600);
   accelgyro.initialize();
   digitalWrite(doorlock,1);
   digitalWrite(opendoor,0);
@@ -118,20 +120,20 @@ void loop(){
         code[s]=appcod[s];    
         }
       store(); 
-      Serial.write("finished");}
+      Serial2.write("finished");}
         
     if(apptype=="chkpwd"){
       int chkpwd=0;
       for(int s=0;s<6;s++){
         if(code[s]==appcod[s]){chkpwd++;}    
        }
-      if(chkpwd==6){Serial.write("correct");}
-      else{Serial.write("error");}}
+      if(chkpwd==6){Serial2.write("correct");}
+      else{Serial2.write("error");}}
 
     if(apptype=="update"){
       jsarray[0] = (digitalRead(package1_status)==1);
       jsarray[1] = (digitalRead(package2_status)==1);
-      jsarray.printTo(Serial);
+      jsarray.printTo(Serial2);
       }
       
     char key1 = myKeypad.getKey();
@@ -143,7 +145,7 @@ void loop(){
         if(gout==1){gout=0;}
         else{gout++;}
     }}
-
+//Serial.print(gout);
     if(myKeypad.key[l].kchar=='*'){
       switch(myKeypad.key[l].kstate){
         case HOLD:
@@ -161,8 +163,9 @@ void loop(){
               if(degree_eq<=9&&degree_eq>=0){break;}}}
           break;}}  
       //Serial.print(degree_eq);   
-  opendoor_keypad();
-  opendoor_eq();
+    if(digitalRead(doorlocksignal) == 1){i==6;}
+    opendoor_keypad();
+    opendoor_eq();
 }
   store();
 }
@@ -180,15 +183,16 @@ void resetcode(void){
 void getvalue_fromapp(void){
   int m=0,p=0;
   apptype="";
-  while(Serial.available() > 0)
+  while(Serial2.available() > 0)
      {  
-      command = ((byte)Serial.read());
+      command = ((byte)Serial2.read());
       //Serial.print(command);
       if(command == ':'){
         p++;}
       else{
         if(p==0){apptype += command;}
         if(p==1){appcod[m] = command;  m++;}}
+        //Serial2.print(command);
       delay(1);}
   return;}
 
@@ -231,7 +235,7 @@ void opendoor_eq(void){
   digitalWrite(opendrawer,0);
   digitalWrite(led,1);
   delay(1500);
-  digitalWrite(doorlock,0);
+  digitalWrite(doorlock,1);
   i=0;
   value=0;
   openclosecount=1;}
@@ -244,8 +248,7 @@ void debounce(void){
     lastDebounceTime = currentTime;
     if(openclosecount==0){
       i=6;
-      opendoor_keypad();
-      Serial.print("open");}
+      opendoor_keypad();}
     else{
       closeall();
       openclosecount=0;}
