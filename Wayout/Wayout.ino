@@ -29,14 +29,14 @@ MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 int value;
-int degree_eq=5;
+int degree_eq=6;
                        
 // 依照行、列排列的按鍵字元（二維陣列）
 char keymap[KEY_ROWS][KEY_COLS] = {
-  {'1', '2', '3', 'A'},
-  {'4', '5', '6', 'B'},
-  {'7', '8', '9', 'C'},
-  {'*', '0', '#', 'D'}
+  {'D', '#', '0', '*'},
+  {'C', '9', '8', '7'},
+  {'B', '6', '5', '4'},
+  {'A', '3', '2', '1'}
 };
 int i=0,j=0,k=0;
 
@@ -131,13 +131,13 @@ void loop(){
       else{Serial2.write("error");}}
 
     if(apptype=="update"){
-      jsarray[0] = (digitalRead(package1_status)==1);
-      jsarray[1] = (digitalRead(package2_status)==1);
+      jsarray[2] = (digitalRead(package1_status)==1);
+      jsarray[4] = (digitalRead(package2_status)==1);
       jsarray.printTo(Serial2);
       }
       
     char key1 = myKeypad.getKey();
- 
+    //Serial.print(key1);
     if(key1){
       if(key1==code[i]){i++;}
       else{i=0;}
@@ -167,7 +167,6 @@ void loop(){
     opendoor_keypad();
     opendoor_eq();
 }
-  store();
 }
 
 void resetcode(void){
@@ -217,6 +216,7 @@ void store(void){
 void opendoor_keypad(void){
  if(i==6){
   digitalWrite(doorlock,0);
+  delay(1000);
   digitalWrite(opendoor,1);
   digitalWrite(closedoor,0);
   i=0;
@@ -229,10 +229,11 @@ void opendoor_keypad(void){
 void opendoor_eq(void){
  if(((value*gout)>=(10+18*degree_eq))){
   digitalWrite(doorlock,0);
-  digitalWrite(opendoor,1);
-  digitalWrite(closedoor,0);
   digitalWrite(closedrawer,1);
   digitalWrite(opendrawer,0);
+  delay(1000);
+  digitalWrite(opendoor,1);
+  digitalWrite(closedoor,0);
   digitalWrite(led,1);
   delay(1500);
   digitalWrite(doorlock,1);
@@ -248,7 +249,9 @@ void debounce(void){
     lastDebounceTime = currentTime;
     if(openclosecount==0){
       i=6;
-      opendoor_keypad();}
+      opendoor_keypad();
+      openclosecount=1;
+      }
     else{
       closeall();
       openclosecount=0;}
