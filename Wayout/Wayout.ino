@@ -222,7 +222,6 @@ void opendoor_keypad(void){
   i=0;
   value=0;
   openclosecount=1;
-  delay(1500);
   digitalWrite(doorlock,1);}
   return;}
 
@@ -235,7 +234,6 @@ void opendoor_eq(void){
   digitalWrite(opendoor,1);
   digitalWrite(closedoor,0);
   digitalWrite(led,1);
-  delay(1500);
   digitalWrite(doorlock,1);
   i=0;
   value=0;
