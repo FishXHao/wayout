@@ -4,6 +4,8 @@
 #include "Wire.h"
 #include <EEPROM.h>
 #include <ArduinoJson.h>
+#include <avr/wdt.h>
+
 
 static int ledStatus;
 static unsigned long lastDebounceTime;
@@ -21,6 +23,7 @@ static unsigned long lastDebounceTime;
 #define closedrawer 29
 #define led 31
 #define doorlocksignal 38
+
 
 StaticJsonBuffer<200> jsonBuffer;
 JsonArray& jsarray = jsonBuffer.createArray();
@@ -51,6 +54,8 @@ int gout = 1;
 
 int openclosecount=0;
 
+int doorstatus=1;
+
 void resetcode(void);
 void getvalue_fromapp(void);
 void store(void);
@@ -70,6 +75,7 @@ void setup(){
   EEPROM.write(13,'4');
   EEPROM.write(14,'5');
   EEPROM.write(15,'6');*/
+  wdt_enable(WDTO_4S);
   pinMode(opendoor,OUTPUT);
   pinMode(closedoor,OUTPUT);
   pinMode(opendrawer,OUTPUT);
@@ -83,20 +89,25 @@ void setup(){
   Wire.begin();
   Serial2.begin(9600);
   accelgyro.initialize();
-  digitalWrite(doorlock,1);
+  /*digitalWrite(doorlock,1);
   digitalWrite(opendoor,0);
   digitalWrite(closedoor,1);
   digitalWrite(closedrawer,0);
   digitalWrite(opendrawer,1);
-  digitalWrite(led,0);
+  digitalWrite(led,0);*/
   jsarray.add(1==0);
   jsarray.add(1==0);
   jsarray.add(1==0);
   jsarray.add(1==0);
+  lastDebounceTime = millis();
+  doorstatus=EEPROM.read(9);
+  //Serial.print(doorstatus);
+  if(doorstatus==0){openclosecount=0;}
+  if(doorstatus==1){openclosecount=1;}
+  if(doorstatus==2){openclosecount=1;digitalWrite(led,1);} 
 }
   
-void loop(){ 
- 
+void loop(){
   acquire();
   
   accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -107,6 +118,9 @@ void loop(){
   
   for(int l = 0; l < LIST_MAX; l++) 
     {
+
+    wdt_reset();
+    
     int switchStatus = 0;
     //Serial.print(switchStatus);
     switchStatus = digitalRead(button_open);
@@ -144,7 +158,11 @@ void loop(){
       if(key1=='A'){
         if(gout==1){gout=0;}
         else{gout++;}
-    }}
+      }
+      if(key1=='B'){
+        closeall();
+      }
+    }
 //Serial.print(gout);
     if(myKeypad.key[l].kchar=='*'){
       switch(myKeypad.key[l].kstate){
@@ -155,7 +173,8 @@ void loop(){
     if(myKeypad.key[l].kchar=='#'){
       switch(myKeypad.key[l].kstate){
         case HOLD:  
-          while(1){            
+          while(1){
+            wdt_reset();            
             char key3 = myKeypad.getKey();
             if(key3){
               charstr_chang[0] = key3;
@@ -172,9 +191,11 @@ void loop(){
 void resetcode(void){
   do{
     char key2 = myKeypad.getKey();
+    //Serial.print(key2);
     if(key2){
       code[k]=key2;
       k++;}
+    wdt_reset();
         }while(k<6);
     k=0;
   return;}
@@ -192,7 +213,7 @@ void getvalue_fromapp(void){
         if(p==0){apptype += command;}
         if(p==1){appcod[m] = command;  m++;}}
         //Serial2.print(command);
-      delay(1);}
+        }
   return;}
 
 void acquire(void){
@@ -214,9 +235,14 @@ void store(void){
   return;}
 
 void opendoor_keypad(void){
+  EEPROM.write(9,1);  
+  unsigned long lastTime = millis();
+  unsigned long currentTime;
  if(i==6){
   digitalWrite(doorlock,0);
-  delay(1000);
+  do{
+    currentTime = millis();
+  }while((currentTime-lastTime)<1000);
   digitalWrite(opendoor,1);
   digitalWrite(closedoor,0);
   i=0;
@@ -226,11 +252,16 @@ void opendoor_keypad(void){
   return;}
 
 void opendoor_eq(void){
+ EEPROM.write(9,2);  
+ unsigned long lastTime = millis();
+ unsigned long currentTime;
  if(((value*gout)>=(10+18*degree_eq))){
   digitalWrite(doorlock,0);
+  do{
+    currentTime = millis();
+  }while((currentTime-lastTime)<1000);
   digitalWrite(closedrawer,1);
   digitalWrite(opendrawer,0);
-  delay(1000);
   digitalWrite(opendoor,1);
   digitalWrite(closedoor,0);
   digitalWrite(led,1);
@@ -241,7 +272,7 @@ void opendoor_eq(void){
   return;}
 
 void debounce(void){
-  unsigned long currentTime = millis();
+  unsigned currentTime = millis();
   if((currentTime - lastDebounceTime) > DEBOUNCE_DELAY){
     //Serial.print(true);
     lastDebounceTime = currentTime;
@@ -257,11 +288,13 @@ void debounce(void){
 }
 
 void closeall(void){
-  digitalWrite(opendoor,0);
-  digitalWrite(closedoor,1);
+  EEPROM.write(9,0);  
   digitalWrite(closedrawer,0);
   digitalWrite(opendrawer,1);
+  digitalWrite(opendoor,0);
+  digitalWrite(closedoor,1); 
   digitalWrite(led,0);
   i=0;
+  openclosecount=0;
 }
 
